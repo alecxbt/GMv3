@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Hono } from 'hono';
 import { logger } from '../utils/logger.js';
 import {
   getSocialMetrics,
@@ -8,37 +8,43 @@ import {
   getMarketSentiment,
 } from '../services/sentimentData.js';
 
-const router = Router();
+type Env = {
+  DATABASE_URL: string;
+  JWT_SECRET: string;
+  Bindings: Env;
+};
+
+const router = new Hono<{ Bindings: Env }>();
 
 // Get social metrics for a single asset
-router.get('/metrics/:symbol', async (req, res) => {
+router.get('/metrics/:symbol', async (c) => {
   try {
-    const { symbol } = req.params;
+    const { symbol } = c.req.param();
     logger.info(`GET /sentiment/metrics/${symbol}`);
     
     const metrics = await getSocialMetrics(symbol);
     
     if (!metrics) {
-      return res.status(404).json({ error: 'Metrics not found' });
+      return c.json({ error: 'Metrics not found' }, 404);
     }
     
-    res.json(metrics);
+    return c.json(metrics);
   } catch (error: any) {
     logger.error('Get social metrics error:', error);
-    res.status(500).json({
+    return c.json({
       error: 'Failed to fetch social metrics',
       message: error.message,
-    });
+    }, 500);
   }
 });
 
 // Get batch social metrics for multiple assets
-router.get('/metrics', async (req, res) => {
+router.get('/metrics', async (c) => {
   try {
-    const { symbols } = req.query;
+    const { symbols } = c.req.query();
     
     if (!symbols) {
-      return res.status(400).json({ error: 'Symbols parameter required' });
+      return c.json({ error: 'Symbols parameter required' }, 400);
     }
     
     logger.info('GET /sentiment/metrics');
@@ -46,63 +52,63 @@ router.get('/metrics', async (req, res) => {
     const symbolList = (symbols as string).split(',');
     const metrics = await getBatchSocialMetrics(symbolList);
     
-    res.json({ metrics });
+    return c.json({ metrics });
   } catch (error: any) {
     logger.error('Get batch social metrics error:', error);
-    res.status(500).json({
+    return c.json({
       error: 'Failed to fetch social metrics',
       message: error.message,
-    });
+    }, 500);
   }
 });
 
 // Get trending topics
-router.get('/trending', async (req, res) => {
+router.get('/trending', async (c) => {
   try {
     logger.info('GET /sentiment/trending');
     const topics = await getTrendingTopics();
-    res.json({ topics });
+    return c.json({ topics });
   } catch (error: any) {
     logger.error('Get trending topics error:', error);
-    res.status(500).json({
+    return c.json({
       error: 'Failed to fetch trending topics',
       message: error.message,
-    });
+    }, 500);
   }
 });
 
 // Get social alerts
-router.get('/alerts', async (req, res) => {
+router.get('/alerts', async (c) => {
   try {
     logger.info('GET /sentiment/alerts');
     const alerts = await getSocialAlerts();
-    res.json({ alerts });
+    return c.json({ alerts });
   } catch (error: any) {
     logger.error('Get social alerts error:', error);
-    res.status(500).json({
+    return c.json({
       error: 'Failed to fetch social alerts',
       message: error.message,
-    });
+    }, 500);
   }
 });
 
 // Get overall market sentiment
-router.get('/market', async (req, res) => {
+router.get('/market', async (c) => {
   try {
     logger.info('GET /sentiment/market');
     const sentiment = await getMarketSentiment();
-    res.json(sentiment);
+    return c.json(sentiment);
   } catch (error: any) {
     logger.error('Get market sentiment error:', error);
-    res.status(500).json({
+    return c.json({
       error: 'Failed to fetch market sentiment',
       message: error.message,
-    });
+    }, 500);
   }
 });
 
 // Get sentiment overview (combined)
-router.get('/overview', async (req, res) => {
+router.get('/overview', async (c) => {
   try {
     logger.info('GET /sentiment/overview');
     
@@ -112,19 +118,18 @@ router.get('/overview', async (req, res) => {
       getMarketSentiment(),
     ]);
 
-    res.json({
+    return c.json({
       trending: trending.slice(0, 10),
       alerts: alerts.slice(0, 10),
       market,
     });
   } catch (error: any) {
     logger.error('Get sentiment overview error:', error);
-    res.status(500).json({
+    return c.json({
       error: 'Failed to fetch sentiment overview',
       message: error.message,
-    });
+    }, 500);
   }
 });
 
 export { router as sentimentRoutes };
-

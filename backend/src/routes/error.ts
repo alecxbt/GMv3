@@ -1,27 +1,33 @@
-import { Router } from 'express';
+import { Hono } from 'hono';
 
-const router = Router();
+type Env = {
+  DATABASE_URL: string;
+  JWT_SECRET: string;
+  Bindings: Env;
+};
+
+const router = new Hono<{ Bindings: Env }>();
 
 // Report error
-router.post('/', async (req, res) => {
+router.post('/', async (c) => {
   try {
-    const { message } = req.body;
+    const body = await c.req.parseBody();
+    const { message } = body as { message?: string };
 
     // Log error (in production, send to Slack/monitoring service)
     console.error('[ERROR REPORT]', {
       message,
       timestamp: new Date().toISOString(),
-      userAgent: req.get('user-agent'),
+      userAgent: c.req.header('user-agent'),
     });
 
     // TODO: Send to Slack webhook or error tracking service
     // await sendToSlack({ message, ... });
 
-    res.json({ success: true, message: 'Error reported' });
+    return c.json({ success: true, message: 'Error reported' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to report error' });
+    return c.json({ error: 'Failed to report error' }, 500);
   }
 });
 
 export { router as errorRoutes };
-

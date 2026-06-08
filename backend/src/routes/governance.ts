@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Hono } from 'hono';
 import { logger } from '../utils/logger.js';
 import {
   getActiveProposals,
@@ -10,141 +10,146 @@ import {
   getGovernanceSummary,
 } from '../services/governanceData.js';
 
-const router = Router();
+type Env = {
+  DATABASE_URL: string;
+  JWT_SECRET: string;
+  Bindings: Env;
+};
+
+const router = new Hono<{ Bindings: Env }>();
 
 // Get active proposals across all DAOs
-router.get('/proposals/active', async (req, res) => {
+router.get('/proposals/active', async (c) => {
   try {
-    const { limit = 50 } = req.query;
+    const { limit } = c.req.query();
     logger.info('GET /governance/proposals/active');
     
-    const proposals = await getActiveProposals(parseInt(limit as string));
-    res.json({ proposals });
+    const proposals = await getActiveProposals(parseInt(limit as string) || 50);
+    return c.json({ proposals });
   } catch (error: any) {
     logger.error('Get active proposals error:', error);
-    res.status(500).json({
+    return c.json({
       error: 'Failed to fetch active proposals',
       message: error.message,
-    });
+    }, 500);
   }
 });
 
 // Get proposals for a specific DAO
-router.get('/dao/:spaceId/proposals', async (req, res) => {
+router.get('/dao/:spaceId/proposals', async (c) => {
   try {
-    const { spaceId } = req.params;
-    const { state, limit = 20 } = req.query;
+    const { spaceId } = c.req.param();
+    const { state, limit } = c.req.query();
     logger.info(`GET /governance/dao/${spaceId}/proposals`);
     
     const proposals = await getDAOProposals(
       spaceId,
       state as 'active' | 'pending' | 'closed' | undefined,
-      parseInt(limit as string)
+      parseInt(limit as string) || 20
     );
     
-    res.json({ proposals });
+    return c.json({ proposals });
   } catch (error: any) {
     logger.error('Get DAO proposals error:', error);
-    res.status(500).json({
+    return c.json({
       error: 'Failed to fetch DAO proposals',
       message: error.message,
-    });
+    }, 500);
   }
 });
 
 // Get top DAOs
-router.get('/daos', async (req, res) => {
+router.get('/daos', async (c) => {
   try {
-    const { limit = 30 } = req.query;
+    const { limit } = c.req.query();
     logger.info('GET /governance/daos');
     
-    const daos = await getTopDAOs(parseInt(limit as string));
-    res.json({ daos });
+    const daos = await getTopDAOs(parseInt(limit as string) || 30);
+    return c.json({ daos });
   } catch (error: any) {
     logger.error('Get top DAOs error:', error);
-    res.status(500).json({
+    return c.json({
       error: 'Failed to fetch DAOs',
       message: error.message,
-    });
+    }, 500);
   }
 });
 
 // Get DAO details
-router.get('/dao/:spaceId', async (req, res) => {
+router.get('/dao/:spaceId', async (c) => {
   try {
-    const { spaceId } = req.params;
+    const { spaceId } = c.req.param();
     logger.info(`GET /governance/dao/${spaceId}`);
     
     const dao = await getDAODetails(spaceId);
     
     if (!dao) {
-      return res.status(404).json({ error: 'DAO not found' });
+      return c.json({ error: 'DAO not found' }, 404);
     }
     
-    res.json(dao);
+    return c.json(dao);
   } catch (error: any) {
     logger.error('Get DAO details error:', error);
-    res.status(500).json({
+    return c.json({
       error: 'Failed to fetch DAO details',
       message: error.message,
-    });
+    }, 500);
   }
 });
 
 // Get votes for a proposal
-router.get('/proposal/:proposalId/votes', async (req, res) => {
+router.get('/proposal/:proposalId/votes', async (c) => {
   try {
-    const { proposalId } = req.params;
-    const { limit = 100 } = req.query;
+    const { proposalId } = c.req.param();
+    const { limit } = c.req.query();
     logger.info(`GET /governance/proposal/${proposalId}/votes`);
     
-    const votes = await getProposalVotes(proposalId, parseInt(limit as string));
-    res.json({ votes });
+    const votes = await getProposalVotes(proposalId, parseInt(limit as string) || 100);
+    return c.json({ votes });
   } catch (error: any) {
     logger.error('Get proposal votes error:', error);
-    res.status(500).json({
+    return c.json({
       error: 'Failed to fetch votes',
       message: error.message,
-    });
+    }, 500);
   }
 });
 
 // Search DAOs
-router.get('/search', async (req, res) => {
+router.get('/search', async (c) => {
   try {
-    const { q } = req.query;
+    const { q } = c.req.query();
     
     if (!q) {
-      return res.status(400).json({ error: 'Query parameter required' });
+      return c.json({ error: 'Query parameter required' }, 400);
     }
     
     logger.info(`GET /governance/search?q=${q}`);
     
     const daos = await searchDAOs(q as string);
-    res.json({ daos });
+    return c.json({ daos });
   } catch (error: any) {
     logger.error('Search DAOs error:', error);
-    res.status(500).json({
+    return c.json({
       error: 'Failed to search DAOs',
       message: error.message,
-    });
+    }, 500);
   }
 });
 
 // Get governance summary
-router.get('/summary', async (req, res) => {
+router.get('/summary', async (c) => {
   try {
     logger.info('GET /governance/summary');
     const summary = await getGovernanceSummary();
-    res.json(summary);
+    return c.json(summary);
   } catch (error: any) {
     logger.error('Get governance summary error:', error);
-    res.status(500).json({
+    return c.json({
       error: 'Failed to fetch governance summary',
       message: error.message,
-    });
+    }, 500);
   }
 });
 
 export { router as governanceRoutes };
-

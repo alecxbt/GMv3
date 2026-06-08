@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Hono } from 'hono';
 import { getQuote, getChartData, getNews, getMostActive, getOptions, getHistoricalComparison, getRatioAnalysis } from '../services/marketData.js';
 import { getCryptoQuote, getCryptoChart, getCryptoNews } from '../services/cryptoData.js';
 import { getFilings } from '../services/edgarData.js';
@@ -8,348 +8,353 @@ import { getFinancialStatements } from '../services/financialStatements.js';
 import { getFundamentalAnalysis } from '../services/fundamentalAnalysis.js';
 import { logger } from '../utils/logger.js';
 
-const router = Router();
+type Env = {
+  DATABASE_URL: string;
+  JWT_SECRET: string;
+  Bindings: Env;
+};
+
+const router = new Hono<{ Bindings: Env }>();
 
 // Get quote data for equities
-router.get('/quote/:ticker', async (req, res) => {
+router.get('/quote/:ticker', async (c) => {
   try {
-    const { ticker } = req.params;
-    const { countryCode } = req.query;
+    const { ticker } = c.req.param();
+    const { countryCode } = c.req.query();
     
     logger.info(`GET /quote/${ticker}`, { countryCode });
     const quote = await getQuote(ticker, countryCode as string);
-    res.json(quote);
+    return c.json(quote);
   } catch (error) {
     logger.error('Quote error:', error);
-    res.status(500).json({ 
+    return c.json({ 
       error: 'Failed to fetch quote',
       message: error instanceof Error ? error.message : 'Unknown error'
-    });
+    }, 500);
   }
 });
 
 // Get chart data for equities
-router.get('/chart/:ticker', async (req, res) => {
+router.get('/chart/:ticker', async (c) => {
   try {
-    const { ticker } = req.params;
-    const { period = '1d', countryCode } = req.query;
+    const { ticker } = c.req.param();
+    const { period, countryCode } = c.req.query();
 
     logger.info(`GET /chart/${ticker}`, { period, countryCode });
-    const data = await getChartData(ticker, period as string, countryCode as string);
-    res.json({ ticker, period, data });
+    const data = await getChartData(ticker, (period as string) || '1d', (countryCode as string) || '');
+    return c.json({ ticker, period: period || '1d', data });
   } catch (error) {
     logger.error('Chart error:', error);
-    res.status(500).json({ 
+    return c.json({ 
       error: 'Failed to fetch chart data',
       message: error instanceof Error ? error.message : 'Unknown error'
-    });
+    }, 500);
   }
 });
 
 // Get news for equities
-router.get('/news/:ticker', async (req, res) => {
+router.get('/news/:ticker', async (c) => {
   try {
-    const { ticker } = req.params;
-    const { limit = 20 } = req.query;
+    const { ticker } = c.req.param();
+    const { limit } = c.req.query();
 
     logger.info(`GET /news/${ticker}`, { limit });
-    const news = await getNews(ticker, parseInt(limit as string));
-    res.json({ ticker, news });
+    const news = await getNews(ticker, parseInt(limit as string) || 20);
+    return c.json({ ticker, news });
   } catch (error) {
     logger.error('News error:', error);
-    res.status(500).json({ 
+    return c.json({ 
       error: 'Failed to fetch news',
       message: error instanceof Error ? error.message : 'Unknown error'
-    });
+    }, 500);
   }
 });
 
 // Get options chain
-router.get('/options/:ticker', async (req, res) => {
+router.get('/options/:ticker', async (c) => {
   try {
-    const { ticker } = req.params;
+    const { ticker } = c.req.param();
     logger.info(`GET /options/${ticker}`);
     const options = await getOptions(ticker);
-    res.json(options);
+    return c.json(options);
   } catch (error) {
     logger.error('Options error:', error);
-    res.status(500).json({ 
+    return c.json({ 
       error: 'Failed to fetch options',
       message: error instanceof Error ? error.message : 'Unknown error'
-    });
+    }, 500);
   }
 });
 
 // Get historical performance comparison
-router.get('/historical-comparison', async (req, res) => {
+router.get('/historical-comparison', async (c) => {
   try {
-    const { tickers, period } = req.query;
+    const { tickers, period } = c.req.query();
     if (!tickers || typeof tickers !== 'string') {
-      return res.status(400).json({ error: 'tickers parameter required (comma-separated)' });
+      return c.json({ error: 'tickers parameter required (comma-separated)' }, 400);
     }
     const tickerArray = tickers.split(',').map(t => t.trim()).filter(Boolean);
     if (tickerArray.length === 0) {
-      return res.status(400).json({ error: 'At least one ticker required' });
+      return c.json({ error: 'At least one ticker required' }, 400);
     }
     logger.info(`GET /historical-comparison?tickers=${tickers}&period=${period || '1y'}`);
     const comparison = await getHistoricalComparison(tickerArray, (period as string) || '1y');
-    res.json(comparison);
+    return c.json(comparison);
   } catch (error) {
     logger.error('Historical comparison error:', error);
-    res.status(500).json({ 
+    return c.json({ 
       error: 'Failed to fetch historical comparison',
       message: error instanceof Error ? error.message : 'Unknown error'
-    });
+    }, 500);
   }
 });
 
 // Get ratio analysis
-router.get('/ratio-analysis', async (req, res) => {
+router.get('/ratio-analysis', async (c) => {
   try {
-    const { ticker1, ticker2, period } = req.query;
+    const { ticker1, ticker2, period } = c.req.query();
     if (!ticker1 || !ticker2) {
-      return res.status(400).json({ error: 'ticker1 and ticker2 parameters required' });
+      return c.json({ error: 'ticker1 and ticker2 parameters required' }, 400);
     }
     logger.info(`GET /ratio-analysis?ticker1=${ticker1}&ticker2=${ticker2}&period=${period || '1y'}`);
     const analysis = await getRatioAnalysis(ticker1 as string, ticker2 as string, (period as string) || '1y');
-    res.json(analysis);
+    return c.json(analysis);
   } catch (error) {
     logger.error('Ratio analysis error:', error);
-    res.status(500).json({ 
+    return c.json({ 
       error: 'Failed to fetch ratio analysis',
       message: error instanceof Error ? error.message : 'Unknown error'
-    });
+    }, 500);
   }
 });
 
 // Get most active stocks
-router.get('/most-active', async (req, res) => {
+router.get('/most-active', async (c) => {
   try {
     const stocks = await getMostActive();
-    res.json({ stocks });
+    return c.json({ stocks });
   } catch (error) {
     logger.error('Most active error:', error);
-    res.status(500).json({ 
+    return c.json({ 
       error: 'Failed to fetch most active stocks',
       message: error instanceof Error ? error.message : 'Unknown error'
-    });
+    }, 500);
   }
 });
 
 // Get crypto quote
-router.get('/crypto/:pair', async (req, res) => {
+router.get('/crypto/:pair', async (c) => {
   try {
-    const { pair } = req.params;
+    const { pair } = c.req.param();
     logger.info(`GET /crypto/${pair}`);
     const quote = await getCryptoQuote(pair);
-    res.json(quote);
+    return c.json(quote);
   } catch (error) {
     logger.error('Crypto quote error:', error);
-    res.status(500).json({ 
+    return c.json({ 
       error: 'Failed to fetch crypto data',
       message: error instanceof Error ? error.message : 'Unknown error'
-    });
+    }, 500);
   }
 });
 
 // Get crypto chart
-router.get('/crypto/:pair/chart', async (req, res) => {
+router.get('/crypto/:pair/chart', async (c) => {
   try {
-    const { pair } = req.params;
-    const { period = '1d' } = req.query;
-    const data = await getCryptoChart(pair, period as string);
-    res.json({ pair, period, data });
+    const { pair } = c.req.param();
+    const { period } = c.req.query();
+    const data = await getCryptoChart(pair, (period as string) || '1d');
+    return c.json({ pair, period: period || '1d', data });
   } catch (error) {
     logger.error('Crypto chart error:', error);
-    res.status(500).json({ 
+    return c.json({ 
       error: 'Failed to fetch crypto chart',
       message: error instanceof Error ? error.message : 'Unknown error'
-    });
+    }, 500);
   }
 });
 
 // Get crypto news
-router.get('/crypto/:pair/news', async (req, res) => {
+router.get('/crypto/:pair/news', async (c) => {
   try {
-    const { pair } = req.params;
-    const { limit = 20 } = req.query;
+    const { pair } = c.req.param();
+    const { limit } = c.req.query();
     logger.info(`GET /crypto/${pair}/news`, { limit });
-    const news = await getCryptoNews(pair, parseInt(limit as string));
-    res.json({ pair, news });
+    const news = await getCryptoNews(pair, parseInt(limit as string) || 20);
+    return c.json({ pair, news });
   } catch (error) {
     logger.error('Crypto news error:', error);
-    res.status(500).json({ 
+    return c.json({ 
       error: 'Failed to fetch crypto news',
       message: error instanceof Error ? error.message : 'Unknown error'
-    });
+    }, 500);
   }
 });
 
 // Get EDGAR filings
-router.get('/filings/:ticker', async (req, res) => {
+router.get('/filings/:ticker', async (c) => {
   try {
-    const { ticker } = req.params;
-    const { limit = 20 } = req.query;
-    const filings = await getFilings(ticker, parseInt(limit as string));
-    res.json({ ticker, filings });
+    const { ticker } = c.req.param();
+    const { limit } = c.req.query();
+    const filings = await getFilings(ticker, parseInt(limit as string) || 20);
+    return c.json({ ticker, filings });
   } catch (error) {
     logger.error('Filings error:', error);
-    res.status(500).json({ 
+    return c.json({ 
       error: 'Failed to fetch filings',
       message: error instanceof Error ? error.message : 'Unknown error'
-    });
+    }, 500);
   }
 });
 
 // Get 13-F filings for a manager
-router.get('/form13f/:managerName', async (req, res) => {
+router.get('/form13f/:managerName', async (c) => {
   try {
-    const { managerName } = req.params;
-    const { limit = 10 } = req.query;
+    const { managerName } = c.req.param();
+    const { limit } = c.req.query();
     const decodedName = decodeURIComponent(managerName);
     logger.info(`GET /form13f/${decodedName}`, { limit });
-    const form13FData = await getForm13F(decodedName, parseInt(limit as string));
-    res.json(form13FData);
+    const form13FData = await getForm13F(decodedName, parseInt(limit as string) || 10);
+    return c.json(form13FData);
   } catch (error) {
     logger.error('13-F error:', error);
-    res.status(500).json({ 
+    return c.json({ 
       error: 'Failed to fetch 13-F filings',
       message: error instanceof Error ? error.message : 'Unknown error'
-    });
+    }, 500);
   }
 });
 
 // Get all tracked managers
-router.get('/managers', async (req, res) => {
+router.get('/managers', async (c) => {
   try {
     logger.info(`GET /managers`);
     const managers = getAllManagers();
-    res.json({ managers });
+    return c.json({ managers });
   } catch (error) {
     logger.error('Get managers error:', error);
-    res.status(500).json({ 
+    return c.json({ 
       error: 'Failed to get managers',
       message: error instanceof Error ? error.message : 'Unknown error'
-    });
+    }, 500);
   }
 });
 
 // Search for managers
-router.get('/managers/search', async (req, res) => {
+router.get('/managers/search', async (c) => {
   try {
-    const { q } = req.query;
+    const { q } = c.req.query();
     if (!q) {
-      return res.status(400).json({ error: 'Query parameter required' });
+      return c.json({ error: 'Query parameter required' }, 400);
     }
     logger.info(`GET /managers/search`, { q });
     const results = await searchManagers(q as string);
-    res.json({ managers: results });
+    return c.json({ managers: results });
   } catch (error) {
     logger.error('Manager search error:', error);
-    res.status(500).json({ 
+    return c.json({ 
       error: 'Failed to search managers',
       message: error instanceof Error ? error.message : 'Unknown error'
-    });
+    }, 500);
   }
 });
 
 // Get private market quote (Nasdaq Private Markets)
-router.get('/private-market/:companyName', async (req, res) => {
+router.get('/private-market/:companyName', async (c) => {
   try {
-    const { companyName } = req.params;
-    const { ticker } = req.query;
+    const { companyName } = c.req.param();
+    const { ticker } = c.req.query();
     logger.info(`GET /private-market/${companyName}`, { ticker });
     const quote = await getPrivateMarketQuote(companyName, ticker as string);
     if (quote) {
-      res.json(quote);
+      return c.json(quote);
     } else {
-      res.status(404).json({ 
+      return c.json({ 
         error: 'Private market data not found',
         message: 'Company may not be listed on Nasdaq Private Markets or API key not configured'
-      });
+      }, 404);
     }
   } catch (error) {
     logger.error('Private market quote error:', error);
-    res.status(500).json({ 
+    return c.json({ 
       error: 'Failed to fetch private market data',
       message: error instanceof Error ? error.message : 'Unknown error'
-    });
+    }, 500);
   }
 });
 
 // Get private market chart
-router.get('/private-market/:companyName/chart', async (req, res) => {
+router.get('/private-market/:companyName/chart', async (c) => {
   try {
-    const { companyName } = req.params;
-    const { ticker, period = '1y' } = req.query;
+    const { companyName } = c.req.param();
+    const { ticker, period } = c.req.query();
     logger.info(`GET /private-market/${companyName}/chart`, { ticker, period });
-    const chartData = await getPrivateMarketChart(companyName, ticker as string, period as string);
-    res.json({ companyName, ticker, period, data: chartData });
+    const chartData = await getPrivateMarketChart(companyName, ticker as string, (period as string) || '1y');
+    return c.json({ companyName, ticker, period: period || '1y', data: chartData });
   } catch (error) {
     logger.error('Private market chart error:', error);
-    res.status(500).json({ 
+    return c.json({ 
       error: 'Failed to fetch private market chart',
       message: error instanceof Error ? error.message : 'Unknown error'
-    });
+    }, 500);
   }
 });
 
 // Search private companies
-router.get('/private-market/search', async (req, res) => {
+router.get('/private-market/search', async (c) => {
   try {
-    const { q } = req.query;
+    const { q } = c.req.query();
     if (!q) {
-      return res.status(400).json({ error: 'Query parameter required' });
+      return c.json({ error: 'Query parameter required' }, 400);
     }
     logger.info(`GET /private-market/search`, { q });
     const companies = await searchPrivateCompanies(q as string);
-    res.json({ companies });
+    return c.json({ companies });
   } catch (error) {
     logger.error('Private market search error:', error);
-    res.status(500).json({ 
+    return c.json({ 
       error: 'Failed to search private companies',
       message: error instanceof Error ? error.message : 'Unknown error'
-    });
+    }, 500);
   }
 });
 
 // Get fundamental analysis
-router.get('/fundamental-analysis/:ticker', async (req, res) => {
+router.get('/fundamental-analysis/:ticker', async (c) => {
   try {
-    const { ticker } = req.params;
-    const { countryCode } = req.query;
+    const { ticker } = c.req.param();
+    const { countryCode } = c.req.query();
     logger.info(`GET /fundamental-analysis/${ticker}`);
     const analysis = await getFundamentalAnalysis(ticker, countryCode as string);
-    res.json(analysis);
+    return c.json(analysis);
   } catch (error) {
     logger.error('Fundamental analysis error:', error);
-    res.status(500).json({ 
+    return c.json({ 
       error: 'Failed to fetch fundamental analysis',
       message: error instanceof Error ? error.message : 'Unknown error'
-    });
+    }, 500);
   }
 });
 
 // Get financial statements
-router.get('/financials/:ticker', async (req, res) => {
+router.get('/financials/:ticker', async (c) => {
   try {
-    const { ticker } = req.params;
-    const { countryCode, periodType = 'quarterly' } = req.query;
+    const { ticker } = c.req.param();
+    const { countryCode, periodType } = c.req.query();
     logger.info(`GET /financials/${ticker}`, { countryCode, periodType });
     const statements = await getFinancialStatements(
       ticker,
       countryCode as string,
-      periodType as 'quarterly' | 'annual'
+      (periodType as 'quarterly' | 'annual') || 'quarterly'
     );
-    res.json({ ticker, periodType, statements });
+    return c.json({ ticker, periodType: periodType || 'quarterly', statements });
   } catch (error) {
     logger.error('Financials error:', error);
-    res.status(500).json({ 
+    return c.json({ 
       error: 'Failed to fetch financial statements',
       message: error instanceof Error ? error.message : 'Unknown error'
-    });
+    }, 500);
   }
 });
 
 export { router as dataRoutes };
-

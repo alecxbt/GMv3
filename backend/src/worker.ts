@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { cors } from '@hono/cors';
+import { cors } from 'hono/cors';
 import { logger } from './utils/logger.js';
 
 // Import routes
@@ -37,8 +37,6 @@ app.use('*', cors({
   origin: (origin) => origin || 'http://localhost:3000',
   credentials: true,
 }));
-
-app.use('*', logger());
 
 // Routes
 app.route('/api/kanban', kanbanRoutes);

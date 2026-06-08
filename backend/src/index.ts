@@ -1,10 +1,9 @@
-import express from 'express';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
+import { serve } from '@hono/node-server';
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+import { logger } from './utils/logger.js';
+
+// Import routes
 import { kanbanRoutes } from './routes/kanban';
 import { watchlistRoutes } from './routes/watchlists';
 import { layoutRoutes } from './routes/layouts';
@@ -23,82 +22,78 @@ import { sentimentRoutes } from './routes/sentiment';
 import { fundamentalRoutes } from './routes/fundamental';
 import { governanceRoutes } from './routes/governance';
 import { alertsRoutes } from './routes/alerts';
-import { setupWebSocket } from './websocket';
-import { logger } from './utils/logger.js';
 import { initializeSampleAlerts } from './services/alertsService.js';
+import dotenv from 'dotenv';
 
 dotenv.config();
 
-const app = express();
-const httpServer = createServer(app);
-const io = new Server(httpServer, {
-  cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-    methods: ['GET', 'POST'],
-  },
-});
+type Env = {
+  DATABASE_URL: string;
+  JWT_SECRET: string;
+  FRONTEND_URL: string;
+  PORT: string;
+};
 
-const PORT = process.env.PORT || 5001;
+const app = new Hono<{ Bindings: Env }>();
 
 // Middleware
-// Configure Helmet for development (less restrictive)
-if (process.env.NODE_ENV === 'production') {
-  app.use(helmet());
-} else {
-  app.use(helmet({
-    contentSecurityPolicy: false,
-    crossOriginEmbedderPolicy: false,
-  }));
-}
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+app.use('*', cors({
+  origin: (origin) => origin || 'http://localhost:3000',
   credentials: true,
 }));
-app.use(express.json());
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 100, // 100 requests per minute for free tier
-  message: 'Too many requests, please try again later.',
-});
-app.use('/api', limiter);
 
 // Routes
-app.use('/api/kanban', kanbanRoutes);
-app.use('/api/layouts', layoutRoutes);
-app.use('/api/watchlists', watchlistRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/portfolio', portfolioRoutes);
-app.use('/api/rss', rssRoutes);
-app.use('/api/exposure', exposureRoutes);
-app.use('/api/errors', errorRoutes);
-app.use('/api/data', dataRoutes);
-app.use('/api/trading', tradingRoutes);
-app.use('/api/onchain', onchainRoutes);
-app.use('/api/defi', defiRoutes);
-app.use('/api/prediction', predictionRoutes);
-app.use('/api/economic', economicRoutes);
-app.use('/api/sentiment', sentimentRoutes);
-app.use('/api/fundamental', fundamentalRoutes);
-app.use('/api/governance', governanceRoutes);
-app.use('/api/alerts', alertsRoutes);
+app.route('/api/kanban', kanbanRoutes);
+app.route('/api/layouts', layoutRoutes);
+app.route('/api/watchlists', watchlistRoutes);
+app.route('/api/auth', authRoutes);
+app.route('/api/portfolio', portfolioRoutes);
+app.route('/api/rss', rssRoutes);
+app.route('/api/exposure', exposureRoutes);
+app.route('/api/errors', errorRoutes);
+app.route('/api/data', dataRoutes);
+app.route('/api/trading', tradingRoutes);
+app.route('/api/onchain', onchainRoutes);
+app.route('/api/defi', defiRoutes);
+app.route('/api/prediction', predictionRoutes);
+app.route('/api/economic', economicRoutes);
+app.route('/api/sentiment', sentimentRoutes);
+app.route('/api/fundamental', fundamentalRoutes);
+app.route('/api/governance', governanceRoutes);
+app.route('/api/alerts', alertsRoutes);
 
 // Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get('/health', (c) => c.json({ 
+  status: 'ok', 
+  timestamp: new Date().toISOString(),
+  platform: 'hono-node-server'
+}));
+
+// 404 handler
+app.notFound((c) => c.json({ error: 'Not Found' }, 404));
+
+// Error handler
+app.onError((err, c) => {
+  console.error('Error:', err);
+  return c.json({ 
+    error: 'Internal server error',
+    message: err.message 
+  }, 500);
 });
 
-// Setup WebSocket
-setupWebSocket(io);
+// Initialize sample alerts on startup (for demo)
+initializeSampleAlerts();
 
-// Start server
-httpServer.listen(PORT, () => {
-  logger.info(`🚀 GM Terminal backend running on port ${PORT}`);
-  logger.info(`Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
-  logger.info(`API endpoints available at: http://localhost:${PORT}/api`);
-  logger.info(`Health check: http://localhost:${PORT}/health`);
-  
-  // Initialize sample alerts for demo
-  initializeSampleAlerts();
+const port = parseInt(process.env.PORT || '5001');
+
+console.log(`🚀 GM Terminal backend running on port ${port}`);
+console.log(`Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
+console.log(`API endpoints available at: http://localhost:${port}/api`);
+console.log(`Health check: http://localhost:${port}/health`);
+
+serve({
+  fetch: app.fetch,
+  port,
 });
+
+export default app;

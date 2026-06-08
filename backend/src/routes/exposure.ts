@@ -1,12 +1,18 @@
-import { Router } from 'express';
+import { Hono } from 'hono';
 import type { Exposure } from '../../../shared/src/types';
 
-const router = Router();
+type Env = {
+  DATABASE_URL: string;
+  JWT_SECRET: string;
+  Bindings: Env;
+};
+
+const router = new Hono<{ Bindings: Env }>();
 
 // Get ETF/fund exposures
-router.get('/:ticker', async (req, res) => {
+router.get('/:ticker', async (c) => {
   try {
-    const { ticker } = req.params;
+    const { ticker } = c.req.param();
 
     // Mock exposure data - replace with ETFdb/Yahoo Finance API
     const mockExposures: Exposure[] = [
@@ -48,11 +54,10 @@ router.get('/:ticker', async (req, res) => {
       },
     ];
 
-    res.json({ ticker, exposures: mockExposures, totalHoldings: 3500 });
+    return c.json({ ticker, exposures: mockExposures, totalHoldings: 3500 });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch exposures' });
+    return c.json({ error: 'Failed to fetch exposures' }, 500);
   }
 });
 
 export { router as exposureRoutes };
-

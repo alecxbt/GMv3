@@ -1,10 +1,16 @@
-import { Router } from 'express';
+import { Hono } from 'hono';
 import type { PortfolioPosition, Portfolio } from '../../../shared/src/types';
 import { MultiExchangePortfolioService } from '../services/multiExchangePortfolio.js';
 import { ExchangeConnectorFactory, ExchangeName, ExchangeCredentials } from '../services/exchangeConnector.js';
 import { logger } from '../utils/logger.js';
 
-const router = Router();
+type Env = {
+  DATABASE_URL: string;
+  JWT_SECRET: string;
+  Bindings: Env;
+};
+
+const router = new Hono<{ Bindings: Env }>();
 
 // Helper to get user credentials (simplified - would use actual auth)
 function getUserCredentials(userId: string): Map<ExchangeName, ExchangeCredentials> {
@@ -27,9 +33,9 @@ let mockPortfolio: Portfolio = {
 };
 
 // Get portfolio (supports multi-exchange aggregation)
-router.get('/', async (req, res) => {
+router.get('/', async (c) => {
   try {
-    const { userId, exchange } = req.query;
+    const { userId, exchange } = c.req.query();
 
     // If exchange is specified, get portfolio from that exchange only
     if (exchange && userId) {
@@ -38,7 +44,7 @@ router.get('/', async (req, res) => {
       const creds = credentials.get(exchangeName);
       
       if (!creds) {
-        return res.status(400).json({ error: `No credentials for ${exchange}` });
+        return c.json({ error: `No credentials for ${exchange}` }, 400);
       }
 
       const service = new MultiExchangePortfolioService();
@@ -49,7 +55,7 @@ router.get('/', async (req, res) => {
       const totalPnl = totalValue - totalCost;
       const totalPnlPercent = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
 
-      return res.json({
+      return c.json({
         positions: positions.map(pos => ({
           ticker: pos.ticker,
           shares: pos.totalQuantity,
@@ -91,7 +97,7 @@ router.get('/', async (req, res) => {
           totalPnlPercent: multiExchangePortfolio.totalPnlPercent,
         };
 
-        return res.json({
+        return c.json({
           ...portfolio,
           exchangeBreakdown: multiExchangePortfolio.exchangeBreakdown,
         });
@@ -131,23 +137,24 @@ router.get('/', async (req, res) => {
       totalPnlPercent,
     };
 
-    res.json(portfolio);
+    return c.json(portfolio);
   } catch (error: any) {
     logger.error('Get portfolio error:', error);
-    res.status(500).json({ 
+    return c.json({ 
       error: 'Failed to fetch portfolio',
       message: error.message,
-    });
+    }, 500);
   }
 });
 
 // Add position
-router.post('/add', async (req, res) => {
+router.post('/add', async (c) => {
   try {
-    const { ticker, shares, type } = req.body;
+    const body = await c.req.parseBody();
+    const { ticker, shares, type } = body as { ticker?: string; shares?: string; type?: string };
 
     if (!ticker || !shares || !type) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      return c.json({ error: 'Missing required fields' }, 400);
     }
 
     const currentPrice = await getCurrentPrice(ticker, type);
@@ -182,20 +189,20 @@ router.post('/add', async (req, res) => {
       mockPortfolio.positions.push(position);
     }
 
-    res.json({ success: true, position });
+    return c.json({ success: true, position });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to add position' });
+    return c.json({ error: 'Failed to add position' }, 500);
   }
 });
 
 // Remove position
-router.delete('/:ticker', async (req, res) => {
+router.delete('/:ticker', async (c) => {
   try {
-    const { ticker } = req.params;
+    const { ticker } = c.req.param();
     mockPortfolio.positions = mockPortfolio.positions.filter((p) => p.ticker !== ticker);
-    res.json({ success: true });
+    return c.json({ success: true });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to remove position' });
+    return c.json({ error: 'Failed to remove position' }, 500);
   }
 });
 
@@ -226,4 +233,3 @@ async function getCurrentPrice(ticker: string, type: string): Promise<number> {
 }
 
 export { router as portfolioRoutes };
-

@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Hono } from 'hono';
 import { logger } from '../utils/logger.js';
 import {
   getWhaleTransactions,
@@ -10,48 +10,54 @@ import {
   getStablecoinFlows,
 } from '../services/onChainData.js';
 
-const router = Router();
+type Env = {
+  DATABASE_URL: string;
+  JWT_SECRET: string;
+  Bindings: Env;
+};
+
+const router = new Hono<{ Bindings: Env }>();
 
 // Get whale transactions
-router.get('/whales', async (req, res) => {
+router.get('/whales', async (c) => {
   try {
-    const { minValue = 1000000, limit = 50 } = req.query;
+    const { minValue, limit } = c.req.query();
     logger.info('GET /onchain/whales');
     
     const transactions = await getWhaleTransactions(
-      parseFloat(minValue as string),
-      parseInt(limit as string)
+      parseFloat(minValue as string) || 1000000,
+      parseInt(limit as string) || 50
     );
     
-    res.json({ transactions });
+    return c.json({ transactions });
   } catch (error: any) {
     logger.error('Get whale transactions error:', error);
-    res.status(500).json({
+    return c.json({
       error: 'Failed to fetch whale transactions',
       message: error.message,
-    });
+    }, 500);
   }
 });
 
 // Get exchange flows
-router.get('/exchange-flows', async (req, res) => {
+router.get('/exchange-flows', async (c) => {
   try {
     logger.info('GET /onchain/exchange-flows');
     const flows = await getExchangeFlows();
-    res.json({ flows });
+    return c.json({ flows });
   } catch (error: any) {
     logger.error('Get exchange flows error:', error);
-    res.status(500).json({
+    return c.json({
       error: 'Failed to fetch exchange flows',
       message: error.message,
-    });
+    }, 500);
   }
 });
 
 // Get funding rates
-router.get('/funding-rates', async (req, res) => {
+router.get('/funding-rates', async (c) => {
   try {
-    const { symbols } = req.query;
+    const { symbols } = c.req.query();
     logger.info('GET /onchain/funding-rates');
     
     const symbolList = symbols 
@@ -59,20 +65,20 @@ router.get('/funding-rates', async (req, res) => {
       : ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'];
     
     const rates = await getFundingRates(symbolList);
-    res.json({ rates });
+    return c.json({ rates });
   } catch (error: any) {
     logger.error('Get funding rates error:', error);
-    res.status(500).json({
+    return c.json({
       error: 'Failed to fetch funding rates',
       message: error.message,
-    });
+    }, 500);
   }
 });
 
 // Get open interest
-router.get('/open-interest', async (req, res) => {
+router.get('/open-interest', async (c) => {
   try {
-    const { symbols } = req.query;
+    const { symbols } = c.req.query();
     logger.info('GET /onchain/open-interest');
     
     const symbolList = symbols 
@@ -80,58 +86,58 @@ router.get('/open-interest', async (req, res) => {
       : ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'];
     
     const oi = await getOpenInterest(symbolList);
-    res.json({ openInterest: oi });
+    return c.json({ openInterest: oi });
   } catch (error: any) {
     logger.error('Get open interest error:', error);
-    res.status(500).json({
+    return c.json({
       error: 'Failed to fetch open interest',
       message: error.message,
-    });
+    }, 500);
   }
 });
 
 // Get liquidations
-router.get('/liquidations', async (req, res) => {
+router.get('/liquidations', async (c) => {
   try {
     logger.info('GET /onchain/liquidations');
     const liquidations = await getLiquidations();
-    res.json({ liquidations });
+    return c.json({ liquidations });
   } catch (error: any) {
     logger.error('Get liquidations error:', error);
-    res.status(500).json({
+    return c.json({
       error: 'Failed to fetch liquidations',
       message: error.message,
-    });
+    }, 500);
   }
 });
 
 // Get token unlocks
-router.get('/token-unlocks', async (req, res) => {
+router.get('/token-unlocks', async (c) => {
   try {
     logger.info('GET /onchain/token-unlocks');
     const unlocks = await getTokenUnlocks();
-    res.json({ unlocks });
+    return c.json({ unlocks });
   } catch (error: any) {
     logger.error('Get token unlocks error:', error);
-    res.status(500).json({
+    return c.json({
       error: 'Failed to fetch token unlocks',
       message: error.message,
-    });
+    }, 500);
   }
 });
 
 // Get stablecoin flows
-router.get('/stablecoin-flows', async (req, res) => {
+router.get('/stablecoin-flows', async (c) => {
   try {
     logger.info('GET /onchain/stablecoin-flows');
     const flows = await getStablecoinFlows();
-    res.json(flows);
+    return c.json(flows);
   } catch (error: any) {
     logger.error('Get stablecoin flows error:', error);
-    res.status(500).json({
+    return c.json({
       error: 'Failed to fetch stablecoin flows',
       message: error.message,
-    });
+    }, 500);
   }
 });
 

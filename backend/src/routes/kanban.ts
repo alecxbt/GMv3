@@ -1,10 +1,23 @@
-import { Router, Request, Response } from 'express';
+import { Hono } from 'hono';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-import { authenticateToken } from '../middleware/auth';
 import { v4 as uuidv4 } from 'uuid';
 
-const router = Router();
+type User = {
+  userId: string;
+  email: string;
+};
+
+type Env = {
+  DATABASE_URL: string;
+  JWT_SECRET: string;
+  Bindings: Env;
+  Variables: {
+    user: User;
+  };
+};
+
+const router = new Hono<{ Bindings: Env; Variables: { user: User } }>();
 const prisma = new PrismaClient();
 
 // --- Schemas ---
@@ -32,14 +45,52 @@ const kanbanStateSchema = z.object({
 });
 
 // --- Middleware ---
-router.use(authenticateToken);
+
+const authenticateToken = async (c: any, next: any) => {
+  const authHeader = c.req.header('Authorization');
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return c.json({ error: 'Access token required' }, 401);
+  }
+
+  try {
+    const env = c.env;
+    const jwt = await import('jsonwebtoken');
+    const payload = jwt.verify(
+      token,
+      env.JWT_SECRET || 'your-secret-key'
+    ) as { userId: string; email: string };
+
+    // Verify user still exists
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+    });
+
+    if (!user) {
+      return c.json({ error: 'User not found' }, 401);
+    }
+
+    c.user = {
+      userId: payload.userId,
+      email: payload.email,
+    };
+
+    return next();
+  } catch (error: any) {
+    if (error.name === 'TokenExpiredError') {
+      return c.json({ error: 'Token expired' }, 401);
+    }
+    return c.json({ error: 'Invalid token' }, 403);
+  }
+};
 
 // --- Kanban Routes ---
 
 // GET /api/kanban - Fetch the user's entire Kanban board
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', authenticateToken, async (c) => {
   try {
-    const userId = req.user!.userId;
+    const userId = c.get('user').userId;
 
     let kanbanBoard = await prisma.kanbanBoard.findUnique({
       where: { userId },
@@ -78,26 +129,27 @@ router.get('/', async (req: Request, res: Response) => {
     const tasksById = kanbanBoard.tasks.reduce((acc, task) => {
       acc[task.id] = task;
       return acc;
-    }, {} as Record<string, PrismaKanbanTask>);
+    }, {} as Record<string, any>);
 
     const organizedColumns = kanbanBoard.columns.map(col => ({
       ...col,
-      taskIds: col.taskIds.filter(taskId => tasksById[taskId]),
+      taskIds: col.taskIds.filter((taskId: string) => tasksById[taskId]),
     }));
 
-    res.json({ ...kanbanBoard, columns: organizedColumns, tasks: tasksById });
+    return c.json({ ...kanbanBoard, columns: organizedColumns, tasks: tasksById });
 
   } catch (error: any) {
     console.error('Error fetching Kanban board:', error);
-    res.status(500).json({ error: 'Failed to fetch Kanban board data' });
+    return c.json({ error: 'Failed to fetch Kanban board data' }, 500);
   }
 });
 
 // POST /api/kanban/tasks - Add a new task
-router.post('/tasks', async (req: Request, res: Response) => {
+router.post('/tasks', authenticateToken, async (c) => {
   try {
-    const userId = req.user!.userId;
-    const validatedData = taskSchema.parse(req.body);
+    const userId = c.get('user').userId;
+    const body = await c.req.parseBody();
+    const validatedData = taskSchema.parse(body);
 
     const userBoard = await prisma.kanbanBoard.findUnique({
       where: { userId },
@@ -105,12 +157,12 @@ router.post('/tasks', async (req: Request, res: Response) => {
     });
 
     if (!userBoard) {
-      return res.status(404).json({ error: 'Kanban board not found for user' });
+      return c.json({ error: 'Kanban board not found for user' }, 404);
     }
 
     const targetColumn = userBoard.columns.find(col => col.id === validatedData.columnId);
     if (!targetColumn) {
-      return res.status(400).json({ error: `Column with ID '${validatedData.columnId}' not found.` });
+      return c.json({ error: `Column with ID '${validatedData.columnId}' not found.` }, 400);
     }
 
     const newTask = await prisma.kanbanTask.create({
@@ -133,22 +185,23 @@ router.post('/tasks', async (req: Request, res: Response) => {
       },
     });
 
-    res.status(201).json(newTask);
+    return c.json(newTask, 201);
 
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.errors });
+      return c.json({ error: error.errors }, 400);
     }
     console.error('Error adding task:', error);
-    res.status(500).json({ error: 'Failed to add task' });
+    return c.json({ error: 'Failed to add task' }, 500);
   }
 });
 
 // PUT /api/kanban/tasks/:taskId - Update an existing task (including moving columns)
-router.put('/tasks/:taskId', async (req: Request, res: Response) => {
+router.put('/tasks/:taskId', authenticateToken, async (c) => {
   try {
-    const userId = req.user!.userId;
-    const { taskId } = req.params;
+    const userId = c.get('user').userId;
+    const { taskId } = c.req.param();
+    const body = await c.req.parseBody();
     // Allow updating specific fields, including columnId and projectLabel
     const validatedUpdates = z.object({
       content: z.string().min(1).optional(),
@@ -157,7 +210,7 @@ router.put('/tasks/:taskId', async (req: Request, res: Response) => {
       reason: z.string().optional(),
       columnId: z.string().optional(), // New column ID if moved
       projectLabel: z.string().min(1).optional(), // New project label
-    }).parse(req.body);
+    }).parse(body);
 
     const userBoard = await prisma.kanbanBoard.findUnique({
       where: { userId },
@@ -168,12 +221,12 @@ router.put('/tasks/:taskId', async (req: Request, res: Response) => {
     });
 
     if (!userBoard) {
-      return res.status(404).json({ error: 'Kanban board not found for user' });
+      return c.json({ error: 'Kanban board not found for user' }, 404);
     }
 
     const taskToUpdate = userBoard.tasks.find(task => task.id === taskId);
     if (!taskToUpdate) {
-      return res.status(404).json({ error: 'Task not found' });
+      return c.json({ error: 'Task not found' }, 404);
     }
 
     let newColumnId = taskToUpdate.columnId;
@@ -188,13 +241,13 @@ router.put('/tasks/:taskId', async (req: Request, res: Response) => {
       if (oldColumn) {
         await prisma.kanbanColumn.update({
           where: { id: taskToUpdate.columnId },
-          data: { taskIds: oldColumn.taskIds.filter(id => id !== taskId) },
+          data: { taskIds: oldColumn.taskIds.filter((id: string) => id !== taskId) },
         });
       }
       // Add task to new column
       const newColumn = userBoard.columns.find(col => col.id === newColumnId);
       if (!newColumn) {
-        return res.status(400).json({ error: `Target column with ID '${newColumnId}' not found.` });
+        return c.json({ error: `Target column with ID '${newColumnId}' not found.` }, 400);
       }
       await prisma.kanbanColumn.update({
         where: { id: newColumnId },
@@ -212,7 +265,7 @@ router.put('/tasks/:taskId', async (req: Request, res: Response) => {
 
     // If no fields were updated, return early to avoid unnecessary DB call
     if (Object.keys(updatedTaskData).length === 0) {
-      return res.status(200).json(taskToUpdate); // Return original task if no updates
+      return c.json(taskToUpdate); // Return original task if no updates
     }
 
     const updatedTask = await prisma.kanbanTask.update({
@@ -220,22 +273,22 @@ router.put('/tasks/:taskId', async (req: Request, res: Response) => {
       data: updatedTaskData,
     });
 
-    res.json(updatedTask);
+    return c.json(updatedTask);
 
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.errors });
+      return c.json({ error: error.errors }, 400);
     }
     console.error('Error updating task:', error);
-    res.status(500).json({ error: 'Failed to update task' });
+    return c.json({ error: 'Failed to update task' }, 500);
   }
 });
 
 // DELETE /api/kanban/tasks/:taskId - Delete a task
-router.delete('/tasks/:taskId', async (req: Request, res: Response) => {
+router.delete('/tasks/:taskId', authenticateToken, async (c) => {
   try {
-    const userId = req.user!.userId;
-    const { taskId } = req.params;
+    const userId = c.get('user').userId;
+    const { taskId } = c.req.param();
 
     const userBoard = await prisma.kanbanBoard.findUnique({
       where: { userId },
@@ -246,12 +299,12 @@ router.delete('/tasks/:taskId', async (req: Request, res: Response) => {
     });
 
     if (!userBoard) {
-      return res.status(404).json({ error: 'Kanban board not found for user' });
+      return c.json({ error: 'Kanban board not found for user' }, 404);
     }
 
     const taskToDelete = userBoard.tasks.find(task => task.id === taskId);
     if (!taskToDelete) {
-      return res.status(404).json({ error: 'Task not found' });
+      return c.json({ error: 'Task not found' }, 404);
     }
 
     // Remove task from its column's taskIds array
@@ -260,30 +313,31 @@ router.delete('/tasks/:taskId', async (req: Request, res: Response) => {
       await prisma.kanbanColumn.update({
         where: { id: columnWithTask.id },
         data: {
-          taskIds: columnWithTask.taskIds.filter(id => id !== taskId),
+          taskIds: columnWithTask.taskIds.filter((id: string) => id !== taskId),
         },
       });
     }
 
     await prisma.kanbanTask.delete({ where: { id: taskId } });
 
-    res.status(204).send(); // No Content
+    return c.body(null, 204); // No Content
 
   } catch (error: any) {
     console.error('Error deleting task:', error);
-    res.status(500).json({ error: 'Failed to delete task' });
+    return c.json({ error: 'Failed to delete task' }, 500);
   }
 });
 
 // PUT /api/kanban - Save the entire Kanban board state (columns, tasks, order)
-router.put('/', async (req: Request, res: Response) => {
+router.put('/', authenticateToken, async (c) => {
   try {
-    const userId = req.user!.userId;
-    const validatedKanbanData = kanbanStateSchema.parse(req.body);
+    const userId = c.get('user').userId;
+    const body = await c.req.parseBody();
+    const validatedKanbanData = kanbanStateSchema.parse(body);
 
     const userBoard = await prisma.kanbanBoard.findUnique({ where: { userId }, include: { columns: true, tasks: true } });
     if (!userBoard) {
-      return res.status(404).json({ error: 'Kanban board not found for user' });
+      return c.json({ error: 'Kanban board not found for user' }, 404);
     }
 
     await prisma.$transaction(async (tx) => {
@@ -301,11 +355,9 @@ router.put('/', async (req: Request, res: Response) => {
         data: { columnOrder: validatedKanbanData.columnOrder },
       });
 
-      // Update tasks - This is more complex as it involves potentially creating new tasks or updating existing ones.
-      // For simplicity in this PUT, we'll assume task IDs are stable and we are updating existing tasks.
-      // A more robust solution might involve comparing current tasks with new tasks to determine create/update/delete operations.
+      // Update tasks
       for (const taskId in validatedKanbanData.tasks) {
-        const taskData = validatedUpdates.tasks[taskId]; // Use validated task data
+        const taskData = validatedKanbanData.tasks[taskId];
         if (taskData) {
            await tx.kanbanTask.update({
              where: { id: taskId },
@@ -322,14 +374,14 @@ router.put('/', async (req: Request, res: Response) => {
       }
     });
 
-    res.json({ message: 'Kanban board saved successfully' });
+    return c.json({ message: 'Kanban board saved successfully' });
 
   } catch (error: any) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.errors });
+      return c.json({ error: error.errors }, 400);
     }
     console.error('Error saving Kanban board:', error);
-    res.status(500).json({ error: 'Failed to save Kanban board' });
+    return c.json({ error: 'Failed to save Kanban board' }, 500);
   }
 });
 

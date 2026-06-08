@@ -1,34 +1,41 @@
-import { Router } from 'express';
+import { Hono } from 'hono';
 import Parser from 'rss-parser';
 import type { RSSFeed, NewsItem } from '../../../shared/src/types';
 
-const router = Router();
+type Env = {
+  DATABASE_URL: string;
+  JWT_SECRET: string;
+  Bindings: Env;
+};
+
+const router = new Hono<{ Bindings: Env }>();
 const parser = new Parser();
 
 // Mock RSS storage (replace with database)
 const mockRSSFeeds: RSSFeed[] = [];
 
 // Add RSS feed
-router.post('/add', async (req, res) => {
+router.post('/add', async (c) => {
   try {
-    const { url, label } = req.body;
+    const body = await c.req.parseBody();
+    const { url, label } = body as { url?: string; label?: string };
 
     if (!url || !label) {
-      return res.status(400).json({ error: 'Missing url or label' });
+      return c.json({ error: 'Missing url or label' }, 400);
     }
 
     // Validate URL
     try {
       new URL(url);
     } catch {
-      return res.status(400).json({ error: 'Invalid URL' });
+      return c.json({ error: 'Invalid URL' }, 400);
     }
 
     // Test parsing the feed
     try {
       await parser.parseURL(url);
     } catch (error) {
-      return res.status(400).json({ error: 'Invalid RSS feed' });
+      return c.json({ error: 'Invalid RSS feed' }, 400);
     }
 
     const feed: RSSFeed = {
@@ -39,20 +46,20 @@ router.post('/add', async (req, res) => {
     };
 
     mockRSSFeeds.push(feed);
-    res.json({ success: true, feed });
+    return c.json({ success: true, feed });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to add RSS feed' });
+    return c.json({ error: 'Failed to add RSS feed' }, 500);
   }
 });
 
 // Get RSS feed items
-router.get('/:label', async (req, res) => {
+router.get('/:label', async (c) => {
   try {
-    const { label } = req.params;
+    const { label } = c.req.param();
     const feed = mockRSSFeeds.find((f) => f.label === label);
 
     if (!feed) {
-      return res.status(404).json({ error: 'RSS feed not found' });
+      return c.json({ error: 'RSS feed not found' }, 404);
     }
 
     const parsed = await parser.parseURL(feed.url);
@@ -64,20 +71,19 @@ router.get('/:label', async (req, res) => {
       publishedAt: item.pubDate || new Date().toISOString(),
     }));
 
-    res.json({ items });
+    return c.json({ items });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch RSS feed' });
+    return c.json({ error: 'Failed to fetch RSS feed' }, 500);
   }
 });
 
 // List all RSS feeds
-router.get('/', async (req, res) => {
+router.get('/', async (c) => {
   try {
-    res.json({ feeds: mockRSSFeeds });
+    return c.json({ feeds: mockRSSFeeds });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to list RSS feeds' });
+    return c.json({ error: 'Failed to list RSS feeds' }, 500);
   }
 });
 
 export { router as rssRoutes };
-
