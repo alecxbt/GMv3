@@ -1,0 +1,38 @@
+name: Agent Coordination
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    types: [opened, synchronize, closed]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify PR status
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}"
+          echo "Status: ${{ github.event.pull_request.state }}"
+          echo "Author: ${{ github.event.pull_request.user.login }}"
+
+      - name: Merge when approved
+        if: github.event.pull_request.state == 'open' && github.event.pull_request.body contains '[ship-it]'
+        run: |
+          echo "Ready to ship - PR approved"
+          # This would trigger a merge workflow
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to Cloudflare
+        run: |
+          echo "Deploying from main branch"
+          # Deploy commands would go here
+
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
