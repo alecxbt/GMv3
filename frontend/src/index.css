@@ -1,0 +1,85 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Godel Terminal-inspired color scheme */
+  --terminal-bg: #1a1a1a;
+  --terminal-fg: #f0f0f0;
+  --terminal-border: #2a2a2a;
+  --terminal-accent: #4a9eff;
+  --terminal-error: #ff4444;
+  --terminal-success: #00ff88;
+  --terminal-dim: #888888;
+  --terminal-hover: #333333;
+  --terminal-selection: rgba(74, 158, 255, 0.2);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'JetBrains Mono', 'Monaco', 'Menlo', 'Consolas', monospace;
+  background: var(--terminal-bg);
+  color: var(--terminal-fg);
+  overflow: hidden;
+  height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Terminal scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--terminal-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--terminal-border);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--terminal-dim);
+}
+
+/* xterm.js overrides */
+.xterm {
+  font-family: 'JetBrains Mono', 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-size: 13px;
+  padding: 0;
+}
+
+.xterm-viewport {
+  background-color: transparent !important;
+}
+
+.xterm-screen {
+  background-color: transparent !important;
+}
+
+.xterm-cursor-layer {
+  z-index: 2;
+}
+
+.xterm-text-layer {
+  z-index: 1;
+}
+
+.xterm .xterm-selection {
+  background: var(--terminal-selection) !important;
+}
+

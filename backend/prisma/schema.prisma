@@ -1,0 +1,253 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String?  // Made optional for OAuth later
+  name      String?
+  subscription String @default("free") // free, pro, enterprise
+  stripeCustomerId String? @unique
+  apiCallsToday Int @default(0)
+  lastApiReset DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  portfolios            PortfolioPosition[]
+  rssFeeds              RSSFeed[]
+  layouts               Layout[]
+  watchlists            Watchlist[]
+  alerts                Alert[]
+  exchangeConnections ExchangeConnection[]
+  orders                Order[]
+  defiPositions         DefiPosition[]
+  watchedProtocols      WatchedProtocol[]
+  kanbanBoard           KanbanBoard? // Link to the user's Kanban board
+}
+
+model PortfolioPosition {
+  id          String   @id @default(cuid())
+  userId      String
+  ticker      String
+  shares      Float
+  costBasis   Float
+  type        String   // equity, crypto, etf, fund, prediction
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique ([userId, ticker, type])
+  @@index ([userId])
+}
+
+model RSSFeed {
+  id        String   @id @default(cuid())
+  userId    String
+  url       String
+  label     String
+  filters   Json?    // Store filters as JSON
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique ([userId, label])
+  @@index ([userId])
+}
+
+model Layout {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  panes     Json     // Store pane configuration as JSON
+  grid      Json     // Store grid configuration as JSON
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index ([userId])
+}
+
+model Watchlist {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  symbols   String[] // Array of symbols
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique ([userId, name])
+  @@index ([userId])
+}
+
+model Alert {
+  id        String   @id @default(cuid())
+  userId    String
+  symbol    String
+  type      String   // price_above, price_below, volume_spike, etc.
+  condition Json     // Store condition details as JSON
+  enabled   Boolean  @default(true)
+  triggered Boolean  @default(false)
+  lastTriggered DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index ([userId])
+  @@index ([symbol])
+  @@index ([enabled])
+}
+
+model ExchangeConnection {
+  id          String   @id @default(cuid())
+  userId      String
+  exchange    String   // binance, coinbase, kraken, etc.
+  apiKey      String   // Encrypted
+  apiSecret   String   // Encrypted
+  passphrase  String?  // Encrypted (for Coinbase)
+  sandbox     Boolean  @default(false)
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique ([userId, exchange])
+  @@index ([userId])
+}
+
+model Order {
+  id              String   @id @default(cuid())
+  userId          String
+  exchange        String
+  symbol          String
+  side            String   // buy, sell
+  type            String   // market, limit, stop, stop_limit
+  quantity        Float
+  price           Float?
+  stopPrice       Float?
+  status          String   // pending, open, filled, partially_filled, cancelled, rejected
+  filledQuantity  Float    @default(0)
+  averageFillPrice Float?
+  clientOrderId   String?
+  routingStrategy String?  // best_price, liquidity, split
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  executions Execution[]
+  
+  @@index ([userId])
+  @@index ([exchange])
+  @@index ([status])
+  @@index ([createdAt])
+}
+
+model Execution {
+  id        String   @id @default(cuid())
+  orderId   String
+  exchange  String
+  quantity  Float
+  price     Float
+  fee       Float?
+  feeAsset  String?
+  timestamp DateTime @default(now())
+  
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  @@index ([orderId])
+  @@index ([timestamp])
+}
+
+model DefiPosition {
+  id              String   @id @default(cuid())
+  userId          String
+  protocolId      String
+  protocolName    String
+  chain           String
+  poolId          String?
+  poolName        String?
+  tokenSymbol     String
+  amount          Float
+  valueUSD        Float
+  apy             Float?
+  apyBase         Float?
+  apyReward       Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index ([userId])
+  @@index ([protocolId])
+}
+
+model WatchedProtocol {
+  id          String   @id @default(cuid())
+  userId      String
+  protocolId  String
+  protocolName String
+  alerts      Json?    // Store alert preferences as JSON
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique ([userId, protocolId])
+  @@index ([userId])
+}
+
+// Kanban Board Models
+model KanbanBoard {
+  id        String   @id @default(cuid())
+  userId    String   @unique // Link to the user who owns this board
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  columns     KanbanColumn[] // The columns within this board
+  tasks       KanbanTask[]   // All tasks associated with this board
+  columnOrder String[]       // Array of column IDs in the desired display order
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model KanbanColumn {
+  id        String @id @default(cuid())
+  boardId   String // Foreign key to KanbanBoard
+  board     KanbanBoard @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  title     String
+  taskIds   String[] // Array of task IDs currently in this column, maintaining order
+
+  @@index ([boardId])
+}
+
+model KanbanTask {
+  id             String   @id @default(cuid())
+  boardId        String   // Foreign key to KanbanBoard
+  board          KanbanBoard @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  content        String   // The main description of the task
+  priority       String?  // e.g., "low", "medium", "high"
+  estimatedEffort String?  // e.g., "2h", "1d"
+  reason         String?  // Reason for update or net new
+  columnId       String   // The ID of the column this task currently belongs to
+  projectLabel   String   // Label for the project (e.g., 'GM Terminal', 'Venture Firm Tech Stack')
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now())
+
+  @@index ([boardId])
+  @@index ([columnId])
+}

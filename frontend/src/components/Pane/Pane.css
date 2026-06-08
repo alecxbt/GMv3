@@ -1,0 +1,250 @@
+.pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--terminal-bg);
+  border: 1px solid var(--terminal-border);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.pane:hover {
+  border-color: var(--terminal-dim);
+}
+
+.pane-active {
+  border-color: var(--terminal-accent);
+}
+
+.pane-active .pane-header {
+  background: var(--terminal-bg-secondary, rgba(74, 158, 255, 0.1));
+}
+
+.pane-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  background: var(--terminal-bg);
+  border-bottom: 1px solid var(--terminal-border);
+  font-size: 11px;
+  font-weight: 400;
+  height: 24px;
+  min-height: 24px;
+  user-select: none;
+  cursor: grab;
+  transition: background 0.15s ease;
+}
+
+.pane-header:active {
+  cursor: grabbing;
+}
+
+.pane-header:hover {
+  background: var(--terminal-hover);
+}
+
+.pane-title-container {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.pane-title {
+  color: var(--terminal-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 11px;
+  cursor: text;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.pane-title:hover {
+  color: var(--terminal-fg);
+}
+
+.pane-ticker-input {
+  background: var(--terminal-border);
+  border: 1px solid var(--terminal-accent);
+  color: var(--terminal-fg);
+  font-size: 10px;
+  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  padding: 1px 4px;
+  width: 100%;
+  outline: none;
+  text-transform: uppercase;
+}
+
+.pane-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pane-link-btn {
+  background: transparent;
+  border: none;
+  color: var(--terminal-dim);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 2px 4px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  transition: all 0.15s ease;
+}
+
+.pane-link-btn:hover {
+  background: var(--terminal-hover);
+  color: var(--terminal-accent);
+}
+
+.pane-close {
+  background: transparent;
+  border: none;
+  color: var(--terminal-dim);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: monospace;
+  font-weight: 300;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+  border-radius: 2px;
+}
+
+.pane-close:hover {
+  background: var(--terminal-error);
+  color: white;
+}
+
+.pane-content {
+  flex: 1;
+  overflow: auto;
+  padding: 8px;
+  font-size: 12px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.pane-content-chart {
+  padding: 0;
+  overflow: hidden;
+}
+
+.pane-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--terminal-fg);
+  opacity: 0.6;
+}
+
+.pane-grid-container {
+  height: 100%;
+  width: 100%;
+  padding: 0;
+}
+
+.pane-grid {
+  height: 100%;
+  width: 100%;
+}
+
+.pane-grid-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+}
+
+.pane-grid-empty-content {
+  text-align: center;
+  color: var(--terminal-fg);
+}
+
+.pane-grid-empty-content h2 {
+  font-size: 18px;
+  margin-bottom: 8px;
+  color: var(--terminal-dim);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.pane-grid-empty-content p {
+  margin: 4px 0;
+  color: var(--terminal-dim);
+  font-size: 11px;
+}
+
+.pane-grid-examples {
+  margin-top: 12px;
+  font-size: 11px;
+}
+
+.pane-grid-examples code {
+  background: var(--terminal-border);
+  padding: 2px 4px;
+  margin: 0 2px;
+  font-size: 10px;
+  color: var(--terminal-accent);
+}
+
+.pane-grid-single {
+  height: 100%;
+  width: 100%;
+  padding: 0;
+}
+
+.pane-resize-handle {
+  width: 2px;
+  background: transparent;
+  cursor: col-resize;
+  transition: all 0.15s ease;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.pane-resize-handle:hover {
+  background: var(--terminal-accent);
+  width: 4px;
+  opacity: 0.8;
+}
+
+.pane-resize-handle[data-panel-group-direction="vertical"] {
+  width: 100%;
+  height: 2px;
+  cursor: row-resize;
+  background: transparent;
+}
+
+.pane-resize-handle[data-panel-group-direction="vertical"]:hover {
+  height: 4px;
+  width: 100%;
+  background: var(--terminal-accent);
+  opacity: 0.8;
+}
+
+.pane-resize-handle::before {
+  display: none;
+}
+
