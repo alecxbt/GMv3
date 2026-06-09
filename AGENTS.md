@@ -2,6 +2,42 @@
 
 This file documents how to spawn AI agents for GM Terminal development.
 
+## Cursor Subagents (Recommended)
+
+Three coordinated subagents live in `.cursor/agents/`:
+
+| Subagent | File | Role |
+|----------|------|------|
+| **gm-frontend** | `.cursor/agents/gm-frontend.md` | React panes, CLI, Zustand, Tailwind, API integration |
+| **gm-backend** | `.cursor/agents/gm-backend.md` | Hono routes, services, Prisma, WebSocket, Workers |
+| **gm-ship** | `.cursor/agents/gm-ship.md` | Code review, debugging, build validation, PRs |
+
+### How to Invoke
+
+```
+Use the gm-backend subagent to add a /api/data/most-active endpoint
+```
+
+```
+Use the gm-frontend subagent to add a MostActivePane and CLI command
+```
+
+```
+Use the gm-ship subagent to validate the most-active feature end-to-end
+```
+
+### Coordinated Feature Flow
+
+Subagents have no shared memory — they coordinate via **structured handoff blocks** in their responses:
+
+```
+1. gm-backend  → Defines shared types + API contract → Backend Handoff block
+2. gm-frontend → Builds pane + CLI (can start once contract is defined) → Frontend Handoff block
+3. gm-ship     → Validates builds, reviews code, checks contract alignment → Ship Report block
+```
+
+For maximum parallelism, invoke backend and frontend in the same turn once the API contract is agreed. Ship runs last (or on any build failure).
+
 ## Quick Reference
 
 ### Spawn All 4 Agents (Full Stack Feature)
