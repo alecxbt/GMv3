@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { Pane } from '../../../shared/src/types';
+import type { Pane } from '@shared/types';
 
 interface SectorData {
   sector: string;

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTerminalStore } from '../../store/useTerminalStore';
-import type { Pane } from '../../../shared/src/types';
+import type { Pane } from '@shared/types';
 
 interface PaneLinkMenuProps {
   pane: Pane;

@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import type { Pane } from '../../../shared/src/types';
+import type { Pane } from '@shared/types';
 import { marketDataApi } from '../../services/api';
 
 interface OptionsPaneProps {

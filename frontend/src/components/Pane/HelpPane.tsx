@@ -1,4 +1,4 @@
-import type { Pane } from '../../../shared/src/types';
+import type { Pane } from '@shared/types';
 
 interface HelpPaneProps {
   pane: Pane;

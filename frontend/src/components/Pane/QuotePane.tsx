@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { Pane, Quote } from '../../../shared/src/types';
+import type { Pane, Quote } from '@shared/types';
 import { speakPriceAlert } from '../../utils/voiceAlerts';
 import { marketDataApi } from '../../services/api';
 import { useWebSocket } from '../../hooks/useWebSocket';

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import type { Pane, Quote } from '../../../../shared/src/types';
+import type { Pane, Quote } from '@shared/types';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { marketDataApi, cryptoApi } from '../../services/api';
 import { useTerminalStore } from '../../store/useTerminalStore';

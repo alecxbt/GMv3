@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import type { Pane } from '../../../shared/src/types';
+import type { Pane } from '@shared/types';
 import api from '../../services/api';
 
 // Custom tick component to ensure white text

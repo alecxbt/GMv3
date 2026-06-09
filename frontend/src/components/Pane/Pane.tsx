@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { useTerminalStore } from '../../store/useTerminalStore';
 import { parseCommand } from '../../utils/commandParser';
-import type { Pane as PaneType } from '../../../shared/src/types';
+import type { Pane as PaneType } from '@shared/types';
 import { ChartPane } from './ChartPane';
 import { NewsPane } from './NewsPane';
 import { QuotePane } from './QuotePane';

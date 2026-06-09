@@ -1,4 +1,4 @@
-import type { Command, AssetType } from '../../../shared/src/types';
+import type { Command, AssetType } from '@shared/types';
 
 // Common country codes (ISO 3166-1 alpha-2)
 const COUNTRY_CODES = new Set([

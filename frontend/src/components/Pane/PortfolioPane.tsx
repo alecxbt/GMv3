@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import type { Pane, Portfolio } from '../../../shared/src/types';
+import type { Pane, Portfolio } from '@shared/types';
 import api from '../../services/api';
 
 interface PortfolioPaneProps {

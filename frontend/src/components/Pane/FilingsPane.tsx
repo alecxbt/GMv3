@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { Pane } from '../../../shared/src/types';
+import type { Pane } from '@shared/types';
 import { marketDataApi } from '../../services/api';
 
 interface Filing {
@@ -16,12 +16,12 @@ interface FilingsPaneProps {
 }
 
 export function FilingsPane({ pane }: FilingsPaneProps) {
+  const ticker = pane.ticker ?? '';
   const [filings, setFilings] = useState<Filing[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
 
   useEffect(() => {
-    const ticker = pane.ticker;
     if (!ticker) return;
 
     const fetchFilings = async () => {

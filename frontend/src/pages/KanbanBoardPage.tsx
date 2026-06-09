@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'react-toastify';
-import { useAuthStore, api } from '../../stores/authStore'; // Assuming authStore handles API calls and user data
+import { useAuthStore, api } from '../stores/authStore';
 
 // --- Interfaces for Kanban Board Data ---
 interface Task {
@@ -54,7 +54,7 @@ export const KanbanBoardPage: React.FC = () => {
   const [newTaskProjectLabel, setNewTaskProjectLabel] = useState(''); // State for the new project label input
   const [addingToColumnId, setAddingToColumnId] = useState<string | null>(null);
 
-  const { user, accessToken, checkAuth, isLoading: isAuthLoading, kanbanBoard, saveKanbanState } = useAuthStore(); // Get kanbanBoard state and save function
+  const { user, accessToken, checkAuth, kanbanBoard } = useAuthStore();
 
   // --- Effect for initial data load ---
   useEffect(() => {
@@ -119,7 +119,7 @@ export const KanbanBoardPage: React.FC = () => {
     const currentTasks: Record<string, Task> = {};
     const currentColumns = { ...initialKanbanData.columns };
 
-    initialTasks.forEach(task => {
+    defaultTasks.forEach((task: Task) => {
       currentTasks[task.id] = task;
       if (currentColumns[task.columnId]) {
         currentColumns[task.columnId].taskIds.push(task.id);
@@ -205,7 +205,7 @@ export const KanbanBoardPage: React.FC = () => {
     setAddingToColumnId(null);
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     if (name === 'content') setNewTaskContent(value);
     if (name === 'priority') setNewTaskPriority(value as Task['priority']);

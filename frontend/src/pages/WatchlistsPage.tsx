@@ -31,7 +31,6 @@ export const WatchlistsPage: React.FC = () => {
     name: '',
     symbols: [],
   });
-  const [symbolInput, setSymbolInput] = useState(''); // For adding symbols to the form
   const [availableSymbols, setAvailableSymbols] = useState<{ value: string; label: string }[]>([]); // Dummy symbols for example
 
   useEffect(() => {

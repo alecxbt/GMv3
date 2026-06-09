@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { Pane } from '../../../shared/src/types';
+import type { Pane } from '@shared/types';
 import api from '../../services/api';
 
 interface Proposal {

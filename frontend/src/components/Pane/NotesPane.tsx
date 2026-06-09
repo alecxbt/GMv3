@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import type { Pane } from '../../../shared/src/types';
+import type { Pane } from '@shared/types';
 
 interface NotesPaneProps {
   pane: Pane;

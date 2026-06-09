@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import type { Pane } from '../../../shared/src/types';
+import type { Pane } from '@shared/types';
 import api from '../../services/api';
 
 interface Protocol {

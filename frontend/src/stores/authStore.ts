@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import axios from 'axios';
+import { toast } from 'react-toastify';
 
 // --- Interfaces ---
 interface Layout {
@@ -43,9 +44,9 @@ interface KanbanColumn {
 }
 
 interface KanbanState {
-  columns: Record<string, Column>;
+  columns: Record<string, KanbanColumn>;
   columnOrder: string[];
-  tasks: Record<string, Task>;
+  tasks: Record<string, KanbanTask>;
 }
 
 // --- API Configuration ---

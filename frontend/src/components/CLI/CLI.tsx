@@ -40,7 +40,6 @@ export function CLI() {
         background: '#1a1a1a',
         foreground: '#f0f0f0',
         cursor: '#4a9eff',
-        selection: 'rgba(74, 158, 255, 0.2)',
         black: '#1a1a1a',
         red: '#ff4444',
         green: '#00ff88',

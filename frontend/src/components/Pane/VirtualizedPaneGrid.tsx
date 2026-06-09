@@ -2,7 +2,7 @@ import React, { useMemo, useCallback } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { useTerminalStore } from '../../store/useTerminalStore';
 import { Pane } from './Pane';
-import type { Pane as PaneType } from '../../../shared/src/types';
+import type { Pane as PaneType } from '@shared/types';
 
 // Virtualized pane grid for 100+ panes with low memory usage
 // Only renders visible panes + buffer
@@ -55,7 +55,8 @@ export function VirtualizedPaneGrid() {
   }
 
   // Grid layout with virtualization
-  const { rows, cols } = layout;
+  const rows = layout.rows ?? 1;
+  const cols = layout.cols ?? 1;
   
   return (
     <div className="pane-grid-container">

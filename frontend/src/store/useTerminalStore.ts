@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Pane, Layout, Command } from '../../../shared/src/types';
+import type { Pane, Layout } from '@shared/types';
 
 interface TerminalState {
   panes: Pane[];

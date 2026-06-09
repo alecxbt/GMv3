@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import type { Pane } from '../../../shared/src/types';
+import type { Pane } from '@shared/types';
 import { marketDataApi } from '../../services/api';
 
 interface HistoricalComparisonPaneProps {
@@ -99,7 +99,7 @@ export function HistoricalComparisonPane({ pane }: HistoricalComparisonPaneProps
   }
 
   // Prepare chart data - combine all tickers' data by time
-  const chartDataMap = new Map<string, Record<string, number>>();
+  const chartDataMap = new Map<string, Record<string, number | string>>();
   
   comparisonData?.data.forEach((tickerData) => {
     if (tickerData.error || !tickerData.data) return;

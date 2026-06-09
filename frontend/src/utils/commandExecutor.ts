@@ -1,4 +1,4 @@
-import type { Command, Pane } from '../../../shared/src/types';
+import type { Command, Pane } from '@shared/types';
 import { useTerminalStore } from '../store/useTerminalStore';
 
 export async function executeCommand(command: Command): Promise<Pane | null> {

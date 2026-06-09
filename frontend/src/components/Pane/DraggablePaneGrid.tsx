@@ -86,7 +86,16 @@ export function DraggablePaneGrid() {
     if (pane) {
       updatePane(paneId, {
         gridLayout: {
-          ...pane.gridLayout,
+          x: pane.gridLayout?.x ?? 0,
+          y: pane.gridLayout?.y ?? 0,
+          w: pane.gridLayout?.w ?? 6,
+          h: pane.gridLayout?.h ?? 4,
+          minW: pane.gridLayout?.minW,
+          minH: pane.gridLayout?.minH,
+          maxW: pane.gridLayout?.maxW,
+          maxH: pane.gridLayout?.maxH,
+          pixelWidth: pane.gridLayout?.pixelWidth,
+          pixelHeight: pane.gridLayout?.pixelHeight,
           pixelX: d.x,
           pixelY: d.y,
         },
@@ -106,7 +115,14 @@ export function DraggablePaneGrid() {
     if (pane) {
       updatePane(paneId, {
         gridLayout: {
-          ...pane.gridLayout,
+          x: pane.gridLayout?.x ?? 0,
+          y: pane.gridLayout?.y ?? 0,
+          w: pane.gridLayout?.w ?? 6,
+          h: pane.gridLayout?.h ?? 4,
+          minW: pane.gridLayout?.minW,
+          minH: pane.gridLayout?.minH,
+          maxW: pane.gridLayout?.maxW,
+          maxH: pane.gridLayout?.maxH,
           pixelX: position.x,
           pixelY: position.y,
           pixelWidth: ref.offsetWidth,

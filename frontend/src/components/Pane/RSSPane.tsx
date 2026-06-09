@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { Pane, NewsItem } from '../../../shared/src/types';
+import type { Pane, NewsItem } from '@shared/types';
 
 interface RSSPaneProps {
   pane: Pane;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { Pane, Exposure } from '../../../shared/src/types';
+import type { Pane, Exposure } from '@shared/types';
 
 interface ExposurePaneProps {
   pane: Pane;

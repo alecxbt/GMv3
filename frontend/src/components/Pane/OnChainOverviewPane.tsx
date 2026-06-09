@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import type { Pane } from '../../../shared/src/types';
+import type { Pane } from '@shared/types';
 import api from '../../services/api';
 
 // Custom tick component to ensure white text
@@ -44,6 +44,8 @@ const CustomYAxisTick = ({ x, y, payload, formatCurrency }: any) => {
 interface ChainData {
   chain: string;
   tvl?: number;
+  change_1d?: number;
+  change_7d?: number;
   revenue24h?: number;
   revenue7d?: number;
   revenue30d?: number;
@@ -53,6 +55,8 @@ interface ChainData {
   activeAddresses?: number;
   transactions24h?: number;
 }
+
+type SortKey = 'tvl' | 'revenue24h' | 'revenue30d' | 'change_1d' | 'change_7d' | 'chain' | 'name';
 
 interface Protocol {
   id: string;
@@ -86,7 +90,7 @@ export function OnChainOverviewPane({ pane }: OnChainOverviewPaneProps) {
   const [viewMode, setViewMode] = useState<'chains' | 'protocols' | 'exchanges'>('chains');
   const [selectedChains, setSelectedChains] = useState<Set<string>>(new Set());
   const [selectedProtocols, setSelectedProtocols] = useState<Set<string>>(new Set());
-  const [sortBy, setSortBy] = useState<'tvl' | 'revenue24h' | 'revenue30d' | 'change_1d' | 'change_7d' | 'chain' | 'name'>('tvl');
+  const [sortBy, setSortBy] = useState<SortKey>('tvl');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [allAvailableChains, setAllAvailableChains] = useState<string[]>([]);
   const [allAvailableProtocols, setAllAvailableProtocols] = useState<string[]>([]);
@@ -149,7 +153,7 @@ export function OnChainOverviewPane({ pane }: OnChainOverviewPaneProps) {
                 }
               }
               
-              const revenueData = revenue || {};
+              const revenueData: Partial<Pick<ChainData, 'revenue24h' | 'revenue7d' | 'revenue30d' | 'fees24h' | 'fees7d' | 'fees30d'>> = revenue || {};
               
               return {
                 chain: chainName,
@@ -227,8 +231,8 @@ export function OnChainOverviewPane({ pane }: OnChainOverviewPaneProps) {
             return exchangeCategories.some(cat => category.includes(cat));
           };
 
-          const regularProtocols = protocolsWithRevenue.filter(p => !isExchange(p));
-          const exchangeProtocols = protocolsWithRevenue.filter(p => isExchange(p));
+          const regularProtocols = protocolsWithRevenue.filter((p: Protocol) => !isExchange(p));
+          const exchangeProtocols = protocolsWithRevenue.filter((p: Protocol) => isExchange(p));
 
           setProtocols(regularProtocols);
           setExchanges(exchangeProtocols);
@@ -299,8 +303,9 @@ export function OnChainOverviewPane({ pane }: OnChainOverviewPaneProps) {
             const bVal = String(b.chain || '').toLowerCase();
             return sortOrder === 'desc' ? bVal.localeCompare(aVal) : aVal.localeCompare(bVal);
           } else {
-            const aVal = Number(a[sortBy]) || 0;
-            const bVal = Number(b[sortBy]) || 0;
+            const key = sortBy as keyof ChainData;
+            const aVal = Number(a[key]) || 0;
+            const bVal = Number(b[key]) || 0;
             return sortOrder === 'desc' ? bVal - aVal : aVal - bVal;
           }
         });

@@ -5,7 +5,7 @@ import { ProtectedRoute } from '../components/Auth/ProtectedRoute';
 import { toast } from 'react-toastify';
 
 // Import react-grid-layout components
-import { Responsive, WidthProvider, Layout as ReactGridLayout } from 'react-grid-layout';
+import { Responsive, WidthProvider, Layout, Layouts } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 
@@ -29,7 +29,7 @@ export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, accessToken, isLoading: isAuthLoading, layouts, watchlists, checkAuth, logout, fetchUserData } = useAuthStore();
   
-  const [currentLayoutConfig, setCurrentLayoutConfig] = useState<ReactGridLayout[] | null>(null);
+  const [currentLayoutConfig, setCurrentLayoutConfig] = useState<Layouts | null>(null);
   const [isDashboardLoading, setIsDashboardLoading] = useState(true);
   const [selectedLayoutName, setSelectedLayoutName] = useState<string | null>(null);
   const [showWatchlists, setShowWatchlists] = useState(false);
@@ -70,27 +70,24 @@ export const DashboardPage: React.FC = () => {
     }
   }, [layouts, user, isDashboardLoading, selectedLayoutName]); // Dependency on layouts ensures it loads when fetched
 
-  const loadLayoutIntoState = (layout) => {
-    let mappedLayout: ReactGridLayout[] = [];
-    if (layout.grid && typeof layout.grid.layouts === 'object' && layout.grid.layouts !== null) {
-      const breakpoints = ['lg', 'md', 'sm', 'xs', 'xxs'];
-      for (const bp of breakpoints) {
-        if (layout.grid.layouts[bp] && Array.isArray(layout.grid.layouts[bp])) {
-          mappedLayout.push({
-            [bp]: layout.grid.layouts[bp].map((item: any) => ({ ...item, i: item.i.toString() })),
-          });
+  const loadLayoutIntoState = (layout: { grid?: { layouts?: Layouts } }) => {
+    if (layout.grid?.layouts && typeof layout.grid.layouts === 'object') {
+      const saved = layout.grid.layouts as Layouts;
+      const normalized: Layouts = {};
+      for (const [bp, items] of Object.entries(saved)) {
+        if (Array.isArray(items)) {
+          normalized[bp] = items.map((item) => ({ ...item, i: item.i.toString() }));
         }
       }
+      if (Object.keys(normalized).length > 0) {
+        setCurrentLayoutConfig(normalized);
+        return;
+      }
     }
-    
-    if (mappedLayout.length === 0) {
-      mappedLayout.push({
-        lg: [
-          { i: '1', x: 0, y: 0, w: 6, h: 6, componentType: 'terminal', name: 'Welcome Terminal', symbol: 'GMID' },
-        ],
-      });
-    }
-    setCurrentLayoutConfig(mappedLayout);
+
+    setCurrentLayoutConfig({
+      lg: [{ i: '1', x: 0, y: 0, w: 6, h: 6 }],
+    });
   };
 
   const renderPane = (layoutItem: any) => {
@@ -110,9 +107,8 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
-  const onLayoutChange = (newLayout: ReactGridLayout[]) => {
-    console.log('Layout changed:', newLayout);
-    // Auto-save logic would go here
+  const onLayoutChange = (_currentLayout: Layout[], allLayouts: Layouts) => {
+    setCurrentLayoutConfig(allLayouts);
   };
 
   const handleSelectLayout = (layoutName: string) => {
@@ -232,24 +228,18 @@ export const DashboardPage: React.FC = () => {
             ) : (
               <ResponsiveGridLayout
                 className="layout"
-                layouts={currentLayoutConfig ? {
-                  lg: currentLayoutConfig.find(bp => bp.lg)?.lg || [],
-                  md: currentLayoutConfig.find(bp => bp.md)?.md || [],
-                  sm: currentLayoutConfig.find(bp => bp.sm)?.sm || [],
-                  xs: currentLayoutConfig.find(bp => bp.xs)?.xs || [],
-                  xxs: currentLayoutConfig.find(bp => bp.xxs)?.xxs || [],
-                } : { lg: [] }}
-                cols={layouts.find(l => l.name === selectedLayoutName)?.grid.cols || 12} 
-                rowHeight={layouts.find(l => l.name === selectedLayoutName)?.grid.rowHeight || 30} 
+                layouts={currentLayoutConfig ?? { lg: [] }}
+                cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
+                rowHeight={layouts.find(l => l.name === selectedLayoutName)?.grid.rowHeight || 30}
                 onLayoutChange={onLayoutChange}
                 isDraggable={true}
                 isResizable={true}
-                margin={{lg: [10, 10], md: [10, 10], sm: [10, 10], xs: [5, 5], xxs: [5, 5]}}
-                containerPadding={{lg: [10, 10], md: [10, 10], sm: [10, 10], xs: [5, 5], xxs: [5, 5]}}
+                margin={{ lg: [10, 10], md: [10, 10], sm: [10, 10], xs: [5, 5], xxs: [5, 5] }}
+                containerPadding={{ lg: [10, 10], md: [10, 10], sm: [10, 10], xs: [5, 5], xxs: [5, 5] }}
               >
-                {currentLayoutConfig && currentLayoutConfig[0]?.lg.map(item => (
+                {(currentLayoutConfig?.lg ?? []).map((item) => (
                   <div key={item.i} className="relative">
-                    {renderPane({ ...item, name: `${selectedLayoutName || 'Dashboard'} - Pane ${item.i}`, symbol: item.symbol })}
+                    {renderPane({ ...item, name: `${selectedLayoutName || 'Dashboard'} - Pane ${item.i}`, symbol: (item as Layout & { symbol?: string }).symbol })}
                   </div>
                 ))}
               </ResponsiveGridLayout>
