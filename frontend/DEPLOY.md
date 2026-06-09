@@ -42,12 +42,15 @@ npx wrangler pages deploy dist --project-name=macroterm-frontend
    - Authorize Cloudflare access to your GitHub/GitLab repository
 
 2. **Configure Build Settings**
+   - Root directory: `frontend`
    - Project name: `macroterm-frontend`
    - Production branch: `main`
    - Build command: `npm run build`
    - Build output directory: `dist`
+   - **Deploy command: leave empty** (Pages deploys `dist/` automatically)
    - Environment variables (add in dashboard):
      - `NODE_VERSION`: `18`
+     - `VITE_API_URL`: your Workers API URL
 
 3. **Deploy**
    - Push to main branch to trigger automatic deployment
@@ -95,6 +98,28 @@ The frontend expects an API at the VITE_API_URL endpoint. When the Hono/Cloudfla
 ### Build Failures
 - Ensure `NODE_VERSION` is set to `18` in Pages settings
 - Check build logs in Cloudflare Dashboard
+
+### Deploy Failures (`wrangler deploy` / Vite 6 error)
+
+If you see:
+```
+Executing user deploy command: npx wrangler deploy
+✘ [ERROR] The version of Vite used in the project ("5.4.21") cannot be automatically configured...
+```
+
+**Cause:** A custom **Deploy command** is set to `npx wrangler deploy`. That command is for **Cloudflare Workers**, not Pages static sites.
+
+**Fix:** In Cloudflare Dashboard → Pages → your project → Settings → Builds:
+1. **Clear the Deploy command** (leave it blank)
+2. Confirm Root directory = `frontend`, Output directory = `dist`
+
+Pages will publish the built `dist/` folder automatically after `npm run build` succeeds.
+
+Only use a deploy command if you explicitly want CLI deploy:
+```bash
+npx wrangler pages deploy dist --project-name=macroterm-frontend
+```
+Use `wrangler pages deploy`, **not** `wrangler deploy`.
 
 ### CORS Issues
 - Configure CORS headers in your Cloudflare Workers backend
