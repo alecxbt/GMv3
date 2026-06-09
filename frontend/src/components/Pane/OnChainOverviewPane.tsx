@@ -287,7 +287,7 @@ export function OnChainOverviewPane({ pane }: OnChainOverviewPaneProps) {
         if (!chains || chains.length === 0) {
           return [];
         }
-        let filtered = chains.filter(chain => {
+        const filtered = chains.filter(chain => {
           if (!chain || !chain.chain) return false;
           // If we have selected chains, only show those
           if (selectedChains.size > 0 && !selectedChains.has(chain.chain)) {
@@ -315,7 +315,7 @@ export function OnChainOverviewPane({ pane }: OnChainOverviewPaneProps) {
         if (!protocols || protocols.length === 0) {
           return [];
         }
-        let filtered = protocols.filter(protocol => {
+        const filtered = protocols.filter(protocol => {
           if (!protocol || !protocol.name) return false;
           // If we have selected protocols, only show those
           if (selectedProtocols.size > 0 && !selectedProtocols.has(protocol.name)) {
@@ -350,7 +350,7 @@ export function OnChainOverviewPane({ pane }: OnChainOverviewPaneProps) {
         if (!exchanges || exchanges.length === 0) {
           return [];
         }
-        let filtered = exchanges.filter(exchange => {
+        const filtered = exchanges.filter(exchange => {
           if (!exchange || !exchange.name) return false;
           // If we have selected protocols, only show those
           if (selectedProtocols.size > 0 && !selectedProtocols.has(exchange.name)) {

@@ -438,10 +438,10 @@ export async function searchYieldsByToken(
     }
 
     const queryLower = tokenQuery.toLowerCase().trim();
-    const queryTokens = queryLower.split(/[-\/\s]+/).filter(Boolean);
+    const queryTokens = queryLower.split(/[-/\s]+/).filter(Boolean);
     
     // Filter pools that match the token query
-    let matchingPools: YieldOpportunity[] = response.data.data
+    const matchingPools: YieldOpportunity[] = response.data.data
       .filter((pool: any) => {
         if (!pool.symbol) return false;
         const symbolLower = pool.symbol.toLowerCase();

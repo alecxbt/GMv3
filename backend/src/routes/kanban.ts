@@ -230,7 +230,7 @@ router.put('/tasks/:taskId', authenticateToken, async (c) => {
     }
 
     let newColumnId = taskToUpdate.columnId;
-    let updatedTaskData: any = {};
+    const updatedTaskData: any = {};
 
     // Handle column change
     if (validatedUpdates.columnId && validatedUpdates.columnId !== taskToUpdate.columnId) {

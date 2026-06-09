@@ -135,10 +135,11 @@ export function checkAlertCondition(
       if (previousValue === undefined) return false;
       return previousValue >= condition.value && currentValue < condition.value;
     
-    case 'percent_change':
+    case 'percent_change': {
       if (previousValue === undefined || previousValue === 0) return false;
       const percentChange = ((currentValue - previousValue) / previousValue) * 100;
       return Math.abs(percentChange) >= Math.abs(condition.value);
+    }
     
     case 'equals':
       return Math.abs(currentValue - condition.value) < 0.0001;

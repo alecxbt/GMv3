@@ -352,7 +352,7 @@ export async function getCryptoChart(
       
       // Map period to CoinMarketCap time ranges
       let timeStart: string;
-      let timeEnd = new Date().toISOString();
+      const timeEnd = new Date().toISOString();
       const now = Date.now();
       
       switch (period) {

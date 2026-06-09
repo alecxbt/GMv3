@@ -60,8 +60,8 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
       const defaultHeight = 400;
       
       // Calculate cascade position
-      let pixelX = 20 + (existingPanes.length % 10) * cascadeOffset;
-      let pixelY = 20 + (existingPanes.length % 10) * cascadeOffset;
+      const pixelX = 20 + (existingPanes.length % 10) * cascadeOffset;
+      const pixelY = 20 + (existingPanes.length % 10) * cascadeOffset;
       
       // Use provided gridLayout if available, otherwise calculate pixel position
       const newPane: Pane = {

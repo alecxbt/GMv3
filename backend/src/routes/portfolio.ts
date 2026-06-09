@@ -24,7 +24,7 @@ function getUserCredentials(userId: string): Map<ExchangeName, ExchangeCredentia
 }
 
 // Mock portfolio storage (replace with database)
-let mockPortfolio: Portfolio = {
+const mockPortfolio: Portfolio = {
   positions: [],
   totalValue: 0,
   totalCost: 0,

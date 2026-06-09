@@ -127,7 +127,7 @@ export function PredictionOverviewPane({ pane }: PredictionOverviewPaneProps) {
         return [];
       }
 
-      let filtered = markets.filter((market: Market) => {
+      const filtered = markets.filter((market: Market) => {
         if (!market || !market.question) return false;
 
         // Search filter
